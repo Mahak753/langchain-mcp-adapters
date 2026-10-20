@@ -24,8 +24,8 @@ from langchain_core.tools import (
 )
 from langchain_core.tools.base import get_all_basemodel_annotations
 from mcp import ClientSession
-from mcp.server.fastmcp.tools import Tool as FastMCPTool
-from mcp.server.fastmcp.utilities.func_metadata import ArgModelBase, FuncMetadata
+from fastmcp.tools import Tool as FastMCPTool
+# from fastmcp.utilities.func_metadata import ArgModelBase, FuncMetadata
 from mcp.types import (
     AudioContent,
     BlobResourceContents,
@@ -329,29 +329,32 @@ async def _list_all_tools(session: ClientSession) -> list[MCPTool]:
     Raises:
         RuntimeError: If maximum iterations exceeded while listing tools.
     """
-    current_cursor: str | None = None
-    all_tools: list[MCPTool] = []
+    # current_cursor: str | None = None
+    # all_tools: list[MCPTool] = []
 
-    iterations = 0
+    # iterations = 0
 
-    while True:
-        iterations += 1
-        if iterations > MAX_ITERATIONS:
-            msg = "Reached max of 1000 iterations while listing tools."
-            raise RuntimeError(msg)
+    # while True:
+    #     iterations += 1
+    #     if iterations > MAX_ITERATIONS:
+    #         msg = "Reached max of 1000 iterations while listing tools."
+    #         raise RuntimeError(msg)
 
-        list_tools_page_result = await session.list_tools(cursor=current_cursor)
+    #     list_tools_page_result = await session.list_tools(cursor=current_cursor)
 
-        if list_tools_page_result.tools:
-            all_tools.extend(list_tools_page_result.tools)
+    #     if list_tools_page_result.tools:
+    #         all_tools.extend(list_tools_page_result.tools)
 
-        # Pagination spec: https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/pagination
-        # compatible with None or ""
-        if not list_tools_page_result.nextCursor:
-            break
+    #     # Pagination spec: https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/pagination
+    #     # compatible with None or ""
+    #     if not list_tools_page_result.nextCursor:
+    #         break
 
-        current_cursor = list_tools_page_result.nextCursor
-    return all_tools
+    #     current_cursor = list_tools_page_result.nextCursor
+    # return all_tools
+    """List all available tools from an MCP session (v2 compatible)."""
+    list_tools_page_result = await session.list_tools()
+    return list_tools_page_result.tools if list_tools_page_result.tools else []
 
 
 def convert_mcp_tool_to_langchain_tool(
@@ -635,7 +638,7 @@ def _get_injected_args(tool: BaseTool) -> list[str]:
     ]
 
 
-def to_fastmcp(tool: BaseTool) -> FastMCPTool:
+def to_fastmcp(tool: BaseTool) -> Any:
     """Convert LangChain tool to FastMCP tool.
 
     Args:
@@ -648,38 +651,39 @@ def to_fastmcp(tool: BaseTool) -> FastMCPTool:
         TypeError: If args_schema is not BaseModel subclass.
         NotImplementedError: If tool has injected arguments.
     """
-    if not issubclass(tool.args_schema, BaseModel):
-        msg = (
-            "Tool args_schema must be a subclass of pydantic.BaseModel. "
-            "Tools with dict args schema are not supported."
-        )
-        raise TypeError(msg)
+    # if not issubclass(tool.args_schema, BaseModel):
+    #     msg = (
+    #         "Tool args_schema must be a subclass of pydantic.BaseModel. "
+    #         "Tools with dict args schema are not supported."
+    #     )
+    #     raise TypeError(msg)
 
-    parameters = tool.tool_call_schema.model_json_schema()
-    field_definitions = {
-        field: (field_info.annotation, field_info)
-        for field, field_info in tool.tool_call_schema.model_fields.items()
-    }
-    arg_model = create_model(
-        f"{tool.name}Arguments", **field_definitions, __base__=ArgModelBase
-    )
-    fn_metadata = FuncMetadata(arg_model=arg_model)
+    # parameters = tool.tool_call_schema.model_json_schema()
+    # field_definitions = {
+    #     field: (field_info.annotation, field_info)
+    #     for field, field_info in tool.tool_call_schema.model_fields.items()
+    # }
+    # arg_model = create_model(
+    #     f"{tool.name}Arguments", **field_definitions, __base__=ArgModelBase
+    # )
+    # fn_metadata = FuncMetadata(arg_model=arg_model)
 
-    # We'll use an Any type for the function return type.
-    # We're providing the parameters separately
-    async def fn(**arguments: dict[str, Any]) -> Any:  # noqa: ANN401
-        return await tool.ainvoke(arguments)
+    # # We'll use an Any type for the function return type.
+    # # We're providing the parameters separately
+    # async def fn(**arguments: dict[str, Any]) -> Any:  # noqa: ANN401
+    #     return await tool.ainvoke(arguments)
 
-    injected_args = _get_injected_args(tool)
-    if len(injected_args) > 0:
-        msg = "LangChain tools with injected arguments are not supported"
-        raise NotImplementedError(msg)
+    # injected_args = _get_injected_args(tool)
+    # if len(injected_args) > 0:
+    #     msg = "LangChain tools with injected arguments are not supported"
+    #     raise NotImplementedError(msg)
 
-    return FastMCPTool(
-        fn=fn,
-        name=tool.name,
-        description=tool.description,
-        parameters=parameters,
-        fn_metadata=fn_metadata,
-        is_async=True,
-    )
+    # return FastMCPTool(
+    #     fn=fn,
+    #     name=tool.name,
+    #     description=tool.description,
+    #     parameters=parameters,
+    #     fn_metadata=fn_metadata,
+    #     is_async=True,
+    # )
+    raise NotImplementedError("to_fastmcp is disabled due to FastMCP v4 incompatibility.")
