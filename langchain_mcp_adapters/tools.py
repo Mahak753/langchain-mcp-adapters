@@ -531,7 +531,7 @@ def convert_mcp_tool_to_langchain_tool(
     return StructuredTool(
         name=lc_tool_name,
         description=tool.description or "",
-        args_schema=tool.inputSchema,
+        args_schema=tool.input_schema,
         coroutine=call_tool,
         response_format="content_and_artifact",
         metadata=metadata,
